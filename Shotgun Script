@@ -1,0 +1,81 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Shotgun_Shooting : MonoBehaviour
+{
+    public Transform firePoint; //sets the point of which the bullet comes out
+    public GameObject bulletPrefab; //sprite setting of the bullet 
+    public float bulletForce = 0; // speed of the projectile
+    public int pellets = 0; // number of pellets shot out of the gun (needs to be > paths)
+    public int paths = 0; // Controls how random the spread of the shotgun is. Higher = more random 
+    public int degreesOfSpread = 0; // The angle of which the pellets can come out of the gun; must be > paths
+    private float angleBetween = 0;
+    private float minz = 0;
+    bool[] shots;
+    private int crate;
+
+    //AUDIO
+    AudioSource audioSource;
+    //Audio Clips
+    [SerializeField] AudioClip shotgunShotSound;
+
+
+    WeaponData weaponData;
+    //Events
+    public static event System.Action<string, int, int, int, Sprite> OnWeaponChange;
+    public static event System.Action<int> OnWeaponFire;
+    public static event System.Action<int, int> OnReload;
+
+
+    void Awake()
+    {
+        weaponData = GetComponent<WeaponData>();
+        audioSource = FindObjectOfType<AudioSource>();
+    }
+
+    private void OnEnable()
+    {
+        OnWeaponChange?.Invoke(weaponData.weaponName, weaponData.magazineRemaining,
+        weaponData.magazineSize, weaponData.ammoReserves, weaponData.weaponIcon); //This line is just a continuation of the last
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        minz = (degreesOfSpread / 2) * -1;
+        angleBetween = degreesOfSpread / (paths - 1);
+        if (Input.GetButtonDown("Fire1"))
+        {
+            Shoot(); //calls the shoot function 
+        }
+    }
+    void Shoot() //shoot boolet
+    {
+        audioSource.PlayOneShot(shotgunShotSound); // plays set shotgun sound
+        weaponData.magazineRemaining--;
+        OnWeaponFire?.Invoke(weaponData.magazineRemaining);
+
+        bool[] willShoot = new bool[paths];
+        // firePoint.Rotate(45, 0, 0); 
+
+
+        int i = 0;
+        while (i < pellets)
+        {
+            crate = Random.Range(0, paths - 1);
+
+            if (willShoot[crate] == false)
+            {
+                willShoot[crate] = true;
+
+                firePoint.localRotation = Quaternion.Euler(0, 0, (crate * angleBetween) + minz - 90);
+                GameObject bullet = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
+                Rigidbody2D rb = bullet.GetComponent<Rigidbody2D>();
+                rb.AddForce(firePoint.up * bulletForce, ForceMode2D.Impulse);
+                i++;
+            }
+        }
+
+    }
+}   
